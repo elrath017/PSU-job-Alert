@@ -11,7 +11,8 @@
     "server": "nodemon server/server.js",
     "client": "npm run dev --prefix client",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "build": "npm run build --prefix client"
+    "build": "npm run build --prefix client",
+    "postinstall": "npm rebuild sqlite3 --build-from-source"
   },
   "keywords": [
     "psu",
