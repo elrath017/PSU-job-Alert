@@ -48,7 +48,18 @@ async function initDb() {
       jobs_found INTEGER DEFAULT 0,
       message TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
+
+  // Ensure default setting for telegram_enabled exists
+  const telegramSetting = await db.get("SELECT value FROM settings WHERE key = 'telegram_enabled'");
+  if (!telegramSetting) {
+    await db.run("INSERT INTO settings (key, value) VALUES ('telegram_enabled', 'true')");
+  }
 
   // Migration columns check for existing database
   try {
@@ -219,8 +230,25 @@ async function seedInitialJobs(db) {
   console.log(`[DB] Successfully seeded ${initialJobs.length} PSU job postings!`);
 }
 
+async function getSetting(key, defaultValue = null) {
+  const db = await getDb();
+  const row = await db.get('SELECT value FROM settings WHERE key = ?', [key]);
+  return row ? row.value : defaultValue;
+}
+
+async function setSetting(key, value) {
+  const db = await getDb();
+  await db.run(
+    'INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+    [key, String(value)]
+  );
+  return String(value);
+}
+
 module.exports = {
   getDb,
   initDb,
-  generateHash
+  generateHash,
+  getSetting,
+  setSetting
 };

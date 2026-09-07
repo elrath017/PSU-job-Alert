@@ -1,7 +1,14 @@
 import React from 'react';
-import { Cpu, RefreshCw, Send, ShieldCheck, Sparkles } from 'lucide-react';
+import { Cpu, RefreshCw, Send, Sparkles, Bell, BellOff } from 'lucide-react';
 
-export default function Header({ onTriggerScrape, isScraping, onOpenTelegramModal, geminiActive }) {
+export default function Header({ 
+  onTriggerScrape, 
+  isScraping, 
+  onOpenTelegramModal, 
+  geminiActive,
+  telegramEnabled,
+  onToggleTelegram 
+}) {
   return (
     <header className="sticky top-0 z-40 glass-panel border-b border-slate-800/80 px-4 lg:px-8 py-3.5">
       <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -12,7 +19,7 @@ export default function Header({ onTriggerScrape, isScraping, onOpenTelegramModa
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
               <Cpu className="w-6 h-6 text-white" />
             </div>
-            <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-[#0b0f19] rounded-full"></span>
+            <span className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 border-2 border-[#0b0f19] rounded-full ${telegramEnabled ? 'bg-emerald-500' : 'bg-amber-500'}`}></span>
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -28,7 +35,7 @@ export default function Header({ onTriggerScrape, isScraping, onOpenTelegramModa
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+        <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
           
           {/* Gemini AI Status Badge */}
           <div className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border ${
@@ -40,11 +47,36 @@ export default function Header({ onTriggerScrape, isScraping, onOpenTelegramModa
             <span>{geminiActive ? 'Gemini 2.5 AI Filter Active' : 'AI Parser Online'}</span>
           </div>
 
-          {/* Telegram Config Button */}
+          {/* Telegram Auto Alert Quick Toggle Pill */}
+          <button
+            onClick={onToggleTelegram}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold rounded-lg border transition-all duration-200 ${
+              telegramEnabled
+                ? 'bg-emerald-950/50 text-emerald-300 border-emerald-700/50 hover:bg-emerald-900/60'
+                : 'bg-slate-800/60 text-slate-400 border-slate-700/60 hover:bg-slate-800'
+            }`}
+            title={telegramEnabled ? "Automatic Telegram Job Alerts are ENABLED (Click to pause)" : "Automatic Telegram Job Alerts are DISABLED (Click to enable)"}
+          >
+            {telegramEnabled ? (
+              <>
+                <Bell className="w-3.5 h-3.5 text-emerald-400 animate-bounce" />
+                <span className="hidden xs:inline">Telegram:</span>
+                <span className="text-emerald-400 font-bold">ON</span>
+              </>
+            ) : (
+              <>
+                <BellOff className="w-3.5 h-3.5 text-slate-400" />
+                <span className="hidden xs:inline">Telegram:</span>
+                <span className="text-slate-400 font-bold">OFF</span>
+              </>
+            )}
+          </button>
+
+          {/* Telegram Config & Broadcast Button */}
           <button
             onClick={onOpenTelegramModal}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 border border-sky-500/30 transition-all duration-200"
-            title="Configure Telegram Bot & Test Alert"
+            title="Configure Telegram Bot & Dispatch Alerts"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Telegram Bot</span>

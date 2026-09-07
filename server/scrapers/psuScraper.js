@@ -1,6 +1,6 @@
 const axios = require('axios');
 const cheerio = require('cheerio');
-const { getDb, generateHash } = require('../db');
+const { getDb, generateHash, getSetting } = require('../db');
 const { filterAndExtractJobWithAI } = require('../services/aiFilter');
 const { sendJobTelegramNotification } = require('../services/notifier');
 
@@ -110,20 +110,25 @@ async function runScraperIngestion() {
           totalNewJobs++;
           console.log(`[NEW JOB INGESTED]: ${jobData.organization} - ${jobData.title}`);
 
-          // Trigger Telegram Alert for newly discovered job if configured
-          sendJobTelegramNotification({
-            organization: jobData.organization,
-            title: jobData.title,
-            category: jobData.category || source.category,
-            qualification: jobData.qualification,
-            experience_level: jobData.experience_level || 'Fresher Eligible',
-            gate_required: jobData.gate_required,
-            selection_mode: jobData.selection_mode || 'CBT (Computer Based Test)',
-            salary: jobData.salary,
-            last_date: jobData.last_date,
-            apply_url: jobData.apply_url,
-            ai_reasoning: jobData.reasoning
-          }).catch(err => console.warn('Telegram dispatch error:', err.message));
+          // Trigger Telegram Alert for newly discovered job if configured & enabled
+          const isTelegramEnabled = (await getSetting('telegram_enabled', 'true')) === 'true';
+          if (isTelegramEnabled) {
+            sendJobTelegramNotification({
+              organization: jobData.organization,
+              title: jobData.title,
+              category: jobData.category || source.category,
+              qualification: jobData.qualification,
+              experience_level: jobData.experience_level || 'Fresher Eligible',
+              gate_required: jobData.gate_required,
+              selection_mode: jobData.selection_mode || 'CBT (Computer Based Test)',
+              salary: jobData.salary,
+              last_date: jobData.last_date,
+              apply_url: jobData.apply_url,
+              ai_reasoning: jobData.reasoning
+            }).catch(err => console.warn('Telegram dispatch error:', err.message));
+          } else {
+            console.log('[SCRAPER] Telegram alerts are disabled. Skipping automated message dispatch.');
+          }
         }
       }
 

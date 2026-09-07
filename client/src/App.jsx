@@ -33,12 +33,40 @@ export default function App() {
   const [scraperDrawerOpen, setScraperDrawerOpen] = useState(false);
 
   const [geminiActive, setGeminiActive] = useState(true);
+  const [telegramEnabled, setTelegramEnabled] = useState(true);
 
   // Initial Data Fetch
   useEffect(() => {
     fetchStats();
     checkHealth();
+    fetchTelegramStatus();
   }, []);
+
+  const fetchTelegramStatus = async () => {
+    try {
+      const res = await fetch('/api/alerts/telegram/status');
+      const data = await res.json();
+      if (data.success) {
+        setTelegramEnabled(data.telegramEnabled);
+      }
+    } catch (e) {
+      console.error('Failed to fetch Telegram status:', e);
+    }
+  };
+
+  const handleToggleTelegram = async () => {
+    const nextState = !telegramEnabled;
+    setTelegramEnabled(nextState);
+    try {
+      await fetch('/api/alerts/telegram/toggle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: nextState })
+      });
+    } catch (e) {
+      console.error('Failed to toggle Telegram:', e);
+    }
+  };
 
   // Re-fetch jobs whenever filters change
   useEffect(() => {
@@ -132,6 +160,8 @@ export default function App() {
         isScraping={isScraping}
         onOpenTelegramModal={handleOpenTelegramGeneralModal}
         geminiActive={geminiActive}
+        telegramEnabled={telegramEnabled}
+        onToggleTelegram={handleToggleTelegram}
       />
 
       {/* Main Container */}
@@ -268,6 +298,8 @@ export default function App() {
         isOpen={telegramModalOpen}
         onClose={() => setTelegramModalOpen(false)}
         targetJob={telegramTargetJob}
+        telegramEnabled={telegramEnabled}
+        onToggleTelegram={handleToggleTelegram}
       />
 
       <ScraperDrawer

@@ -1,4 +1,25 @@
 const axios = require('axios');
+const https = require('https');
+const dns = require('dns');
+
+// Custom HTTPS Agent to ensure IPv4 DNS resolution for api.telegram.org
+const telegramHttpsAgent = new https.Agent({
+  lookup: (hostname, options, callback) => {
+    if (typeof options === 'function') {
+      callback = options;
+      options = {};
+    }
+    dns.resolve4(hostname, (err, addresses) => {
+      if (!err && addresses && addresses.length > 0) {
+        if (options.all) {
+          return callback(null, addresses.map(a => ({ address: a, family: 4 })));
+        }
+        return callback(null, addresses[0], 4);
+      }
+      dns.lookup(hostname, options, callback);
+    });
+  }
+});
 
 /**
  * Dispatches Telegram Notification via Telegram Bot API
@@ -18,12 +39,19 @@ async function sendTelegramMessage(botToken, chatId, textMessage, parseMode = 'H
 
   try {
     const url = `https://api.telegram.org/bot${token}/sendMessage`;
-    const response = await axios.post(url, {
-      chat_id: chat,
-      text: textMessage,
-      parse_mode: parseMode,
-      disable_web_page_preview: false
-    });
+    const response = await axios.post(
+      url,
+      {
+        chat_id: chat,
+        text: textMessage,
+        parse_mode: parseMode,
+        disable_web_page_preview: false
+      },
+      {
+        httpsAgent: telegramHttpsAgent,
+        timeout: 10000
+      }
+    );
 
     return {
       success: true,
@@ -93,8 +121,42 @@ async function sendJobTelegramNotification(job, botToken, chatId) {
   return await sendTelegramMessage(botToken, chatId, message);
 }
 
+/**
+ * Sends top N latest scraped jobs to Telegram
+ */
+async function sendLatestJobsTelegramAlert(limit = 5, botToken, chatId) {
+  const { getDb } = require('../db');
+  const db = await getDb();
+  const latestJobs = await db.all('SELECT * FROM jobs ORDER BY id DESC LIMIT ?', [limit]);
+
+  if (!latestJobs || latestJobs.length === 0) {
+    return {
+      success: false,
+      message: 'No jobs found in database to send.'
+    };
+  }
+
+  const results = [];
+  for (const job of latestJobs) {
+    const res = await sendJobTelegramNotification(job, botToken, chatId);
+    results.push({ jobId: job.id, title: job.title, organization: job.organization, result: res });
+  }
+
+  const isMock = results.some(r => r.result.mock);
+  const successCount = results.filter(r => r.result.success || r.result.mock).length;
+
+  return {
+    success: true,
+    mock: isMock,
+    count: successCount,
+    totalJobs: latestJobs.length,
+    results
+  };
+}
+
 module.exports = {
   sendTelegramMessage,
   sendTestTelegramAlert,
-  sendJobTelegramNotification
+  sendJobTelegramNotification,
+  sendLatestJobsTelegramAlert
 };
